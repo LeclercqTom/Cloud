@@ -23,12 +23,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-     - uses: cschleiden/replace-tokens@v1
-       with:
+      - uses: cschleiden/replace-tokens@v1
+        with:
           tokenPrefix: '#{'
           tokenSuffix: '}#'
           files: '["**/*.tf"]'
-       env:
+        env:
           my_client_secret: ${{secrets.CLIENT_SECRET}}
           my_client_id: ${{secrets.CLIENT_ID}}
           my_tenant_id: ${{secrets.TENANT_ID}}
