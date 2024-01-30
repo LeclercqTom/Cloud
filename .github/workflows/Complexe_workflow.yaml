@@ -1,0 +1,52 @@
+name: terraform plan or apply complexe
+
+on:
+  workflow_dispatch:
+    inputs:
+      Environment:
+        required: true
+        type: string
+      terraform_step:
+        required: true
+        type: string
+
+env:
+  working-directory: "./Complexe_tf/${{inputs.Environment}}"
+
+jobs:
+  terraform-plan-or-apply:
+    name: 'terraform plan or apply'
+    runs-on: ubuntu-latest
+      
+    steps:
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Terraform init
+        id: init 
+        run: terraform init
+        working-directory: ./${{ env.working-directory }}
+
+      - name: Terraform Validate
+        id: Validate
+        working-directory: ./${{ env.working-directory }}
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ./${{ env.working-directory }}
+        if: ${{inputs.terraform_step}} == 'plan'
+        run: terraform plan -no-color -input=false -out /tmp/tfpreviousplan.binary
+        continue-on-error: true
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform Apply
+        working-directory: ./${{ env.working-directory }}
+        if: ${{inputs.terraform_step}} == 'apply'
+        run: terraform apply -auto-approve -input=false

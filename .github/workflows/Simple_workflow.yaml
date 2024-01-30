@@ -1,0 +1,61 @@
+name: terraform plan or apply simple
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  working-directory: "./Simple_tf"
+
+jobs:
+  terraform-plan-or-apply:
+    name: 'terraform plan or apply'
+    runs-on: ubuntu-latest
+      
+    steps:
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: cschleiden/replace-tokens@v1
+        with:
+          tokenPrefix: '#{'
+          tokenSuffix: '}#'
+          files: '["**/*.tf"]'
+        env:
+          my_client_secret: ${{secrets.CLIENT_SECRET}}
+          my_client_id: ${{secrets.CLIENT_ID}}
+          my_tenant_id: ${{secrets.TENANT_ID}}
+          my_subscription_id: ${{secrets.SUBSCRIPTION_ID}}
+
+      - name: Terraform init
+        id: init 
+        run: terraform init
+        working-directory: ./${{ env.working-directory }}
+
+      - name: Terraform Validate
+        id: Validate
+        working-directory: ./${{ env.working-directory }}
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ./${{ env.working-directory }}
+        if: github.event_name == 'pull_request'
+        run: terraform plan -no-color -input=false -out /tmp/tfpreviousplan.binary
+        continue-on-error: true
+      
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform Apply
+        working-directory: ./${{ env.working-directory }}
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve -input=false
